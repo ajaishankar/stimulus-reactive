@@ -36,7 +36,7 @@ class CartItemController extends Controller {
   }
 
   connect() {
-    // item total will be updated whenever price or quantity changes
+    // item total will be updated when price or quantity changes
     this.effect(() => {
       this.totalTarget.textContent = (
         this.priceValue * this.quantityValue
@@ -54,8 +54,8 @@ class CartController extends Controller {
   }
 
   connect() {
-    // total will be automatically updated whenever items get added or removed
-    // it will also be updated whenever an individual item's price or quantity changes!
+    // total will be updated when items get added or removed
+    // or when an individual item's price or quantity changes!
     const total = this.computed(() =>
       this.cartItemOutlets.reduce(
         (total, item) => total + item.priceValue * item.quantityValue,
@@ -63,7 +63,7 @@ class CartController extends Controller {
       )
     );
 
-    // enable checkout button only when there are items in cart
+    // checkout button will be enabled only when balance is due
     this.effect(() => (this.checkoutTarget.disabled = total.value <= 0));
 
     // text content is kept in sync with cart total
