@@ -1,0 +1,186 @@
+import { Application, Controller } from "@hotwired/stimulus";
+import {
+  EffectScope,
+  effectScope,
+  shallowReactive,
+  computed as vueComputed,
+  effect as vueEffect,
+} from "@vue/reactivity";
+
+export type Effect = (fn: () => unknown) => void;
+export type Computed = <T>(fn: () => T) => { value: T };
+
+type ReactiveController = Controller & {
+  __reactive: {
+    state: Record<string, unknown>;
+    scope: EffectScope;
+  };
+};
+
+function getPropertyDescriptors(
+  prototype: object,
+  pattern: RegExp,
+  checkAncestors = true
+) {
+  const matches = {} as { [name: string]: PropertyDescriptor };
+  while (prototype != null) {
+    const descriptors = Object.getOwnPropertyDescriptors(prototype);
+    for (const name in descriptors) {
+      if (pattern.test(name) && !(name in matches)) {
+        matches[name] = descriptors[name];
+      }
+    }
+    if (checkAncestors) {
+      prototype = Object.getPrototypeOf(prototype);
+    } else {
+      break;
+    }
+  }
+  return matches;
+}
+
+export function useStimulusReactive(
+  identifier: string,
+  application: Application
+) {
+  const definition = application.router.modules.find(
+    (module) => module.identifier === identifier
+  );
+  const prototype = definition!.controllerConstructor.prototype;
+  const values = getPropertyDescriptors(prototype, /^(?!has).+Value$/, false);
+  const outlets = getPropertyDescriptors(prototype, /^(?!has).+Outlet$/, false);
+  const methods = getPropertyDescriptors(
+    prototype,
+    /^initialize|disconnect|(.+)(ValueChanged|OutletConnected|OutletDisconnected)$/
+  );
+
+  function initialize(this: ReactiveController) {
+    if (this.__reactive == null) {
+      _initialize.call(this);
+    }
+    methods["initialize"].value.call(this);
+  }
+
+  function _initialize(this: ReactiveController) {
+    this.__reactive = {
+      state: shallowReactive({}),
+      scope: effectScope(),
+    };
+
+    Object.entries(values).forEach(([key, { set }]) => {
+      this.__reactive.state[key] = undefined;
+      Object.defineProperty(this, key, {
+        get() {
+          return this.__reactive.state[key];
+        },
+        set,
+      });
+    });
+
+    Object.entries(outlets).forEach(([key, { get: originalGet }]) => {
+      const outletsKey = `${key}s`;
+      const hasOutletKey = "has" + key[0].toUpperCase() + key.substring(1);
+      this.__reactive.state[outletsKey] = shallowReactive([]);
+      Object.defineProperty(this, outletsKey, {
+        get() {
+          return this.__reactive.state[outletsKey];
+        },
+      });
+      Object.defineProperty(this, hasOutletKey, {
+        get() {
+          return this.__reactive.state[outletsKey].length > 0;
+        },
+      });
+      Object.defineProperty(this, key, {
+        get() {
+          return (
+            this.__reactive.state[outletsKey][0] ?? originalGet!.call(this)
+          );
+        },
+      });
+    });
+  }
+
+  function disconnect(this: ReactiveController) {
+    this.__reactive.scope.stop();
+    this.__reactive.scope = effectScope();
+
+    Object.keys(values).forEach(
+      (key) => (this.__reactive.state[key] = undefined)
+    );
+    Object.keys(outlets).forEach((key) => {
+      const array = this.__reactive.state[`${key}s`] as Controller[];
+      array.splice(0, array.length);
+    });
+
+    methods["disconnect"].value.call(this);
+  }
+
+  function valueChanged(name: string) {
+    const valueChangedKey = `${name}Changed`;
+    Object.defineProperty(prototype, valueChangedKey, {
+      value: function (
+        this: ReactiveController,
+        value: unknown,
+        previousValue: unknown
+      ) {
+        this.__reactive.state[name] = value;
+        methods[valueChangedKey]?.value?.call(this, value, previousValue);
+      },
+    });
+  }
+
+  function outletConnected(name: string) {
+    const outletsKey = `${name}s`;
+    const connectedKey = `${name}Connected`;
+
+    Object.defineProperty(prototype, connectedKey, {
+      value: function (
+        this: ReactiveController,
+        controller: Controller,
+        element: Element
+      ) {
+        const array = this.__reactive.state[outletsKey] as Controller[];
+        array.push(controller);
+        methods[connectedKey]?.value?.call(this, controller, element);
+      },
+    });
+  }
+
+  function outletDisconnected(name: string) {
+    const outletsKey = `${name}s`;
+    const disconnectedKey = `${name}Disconnected`;
+
+    Object.defineProperty(prototype, disconnectedKey, {
+      value: function (
+        this: ReactiveController,
+        controller: Controller,
+        element: Element
+      ) {
+        const outlets = this.__reactive.state[outletsKey] as Controller[];
+        const index = outlets.findIndex((outlet) => outlet === controller);
+        if (index > -1) {
+          outlets.splice(index, 1);
+        }
+        methods[disconnectedKey]?.value?.call(this, controller, element);
+      },
+    });
+  }
+
+  function effect(this: ReactiveController, fn: () => unknown) {
+    this.__reactive.scope.run(() => vueEffect(fn));
+  }
+
+  function computed<T>(this: ReactiveController, fn: () => T): { value: T } {
+    const computedRef = this.__reactive.scope.run(() => vueComputed(fn));
+    return computedRef!;
+  }
+
+  Object.defineProperty(prototype, "effect", { value: effect });
+  Object.defineProperty(prototype, "computed", { value: computed });
+  Object.defineProperty(prototype, "initialize", { value: initialize });
+  Object.defineProperty(prototype, "disconnect", { value: disconnect });
+  Object.keys(values).forEach((key) => valueChanged(key));
+  Object.keys(outlets).forEach((key) => outletConnected(key));
+  Object.keys(outlets).forEach((key) => outletDisconnected(key));
+}
