@@ -1,3 +1,6 @@
+[![version(scoped)](https://img.shields.io/npm/v/stimulus-reactive.svg)](https://www.npmjs.com/package/stimulus-reactive)
+[![codecov](https://codecov.io/gh/ajaishankar/stimulus-reactive/graph/badge.svg?token=LJIR8JVZAN)](https://codecov.io/gh/ajaishankar/stimulus-reactive)
+
 # Stimulus Reactive
 
 ### Reactivity for the Stimulus you already have
