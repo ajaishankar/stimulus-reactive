@@ -67,13 +67,16 @@ export function useStimulusReactive(
       scope: effectScope(),
     };
 
-    Object.entries(values).forEach(([key, { set }]) => {
+    Object.entries(values).forEach(([key, { set: originalSet }]) => {
       this.__reactive.state[key] = undefined;
       Object.defineProperty(this, key, {
         get() {
           return this.__reactive.state[key];
         },
-        set,
+        set(value: any) {
+          this.__reactive.state[key] = value;
+          originalSet!.call(this, value);
+        },
       });
     });
 

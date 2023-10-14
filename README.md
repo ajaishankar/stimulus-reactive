@@ -21,7 +21,7 @@ When a cart item gets added or removed, or an existing item's quantity or price 
 - The cart total will show the correct value
 - The checkout button will be enabled or disabled based on the total.
 
-In `effect` (pun intended) Stimulus Reactive allows you to *declaratively specify* the logic of your controllers.
+In `effect` (pun intended) Stimulus Reactive allows you to *declaratively specify* the behavior of your controllers.
 
 ```js
 class CartItemController extends Controller {

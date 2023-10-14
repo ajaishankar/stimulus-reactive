@@ -145,18 +145,21 @@ const fireInputEvent = (selector: string, value: string) => {
   );
 };
 
-function verifyAmount(testId: string, value: number) {
+function verifyContent(testId: string, value: number) {
   return waitFor(() => {
     expect(screen.getByTestId(testId).textContent).toBe(value.toString());
   });
 }
 
-function verifyAttribute(testId: string, attr: string, present: boolean) {
+function verifyAttribute(testId: string, name: string, value: any) {
   return waitFor(() => {
-    if (present) {
-      expect(screen.getByTestId(testId).getAttribute(attr)).not.toBeNull();
+    const attr = screen.getByTestId(testId).getAttribute(name);
+    if (value === true) {
+      expect(attr).not.toBeNull();
+    } else if (value === false) {
+      expect(attr).toBeNull();
     } else {
-      expect(screen.getByTestId(testId).getAttribute(attr)).toBeNull();
+      expect(attr).toEqual(value.toString());
     }
   });
 }
@@ -167,6 +170,7 @@ function waitUntil(predicate: () => boolean) {
 
 const itemHTML = (itemId: string, price: number) => `
   <div id="${itemId}"
+    data-testId="${itemId}"
     data-controller="cart-item"
     data-cart-item-price-value="${price}"
     class="cart-item"
@@ -221,26 +225,26 @@ describe("stimulus reactive", () => {
   });
 
   it("should initialize state from dom", async () => {
-    await verifyAmount("item-1-total", 5);
-    await verifyAmount("cart-total", 5);
+    await verifyContent("item-1-total", 5);
+    await verifyContent("cart-total", 5);
     await verifyAttribute("checkout", "disabled", false);
   });
 
   it("should react to value changes", async () => {
     fireInputEvent("#item-1 .quantity", "2");
-    await verifyAmount("item-1-total", 10);
-    await verifyAmount("cart-total", 10);
+    await verifyContent("item-1-total", 10);
+    await verifyContent("cart-total", 10);
   });
 
   it("should react to outlet connects", async () => {
     document.body.insertAdjacentHTML("beforeend", itemHTML("item-2", 10));
-    await verifyAmount("item-2-total", 10);
-    await verifyAmount("cart-total", 15);
+    await verifyContent("item-2-total", 10);
+    await verifyContent("cart-total", 15);
   });
 
   it("should react to outlet disconnects", async () => {
     document.querySelector("#item-1")!.remove();
-    await verifyAmount("cart-total", 0);
+    await verifyContent("cart-total", 0);
     await verifyAttribute("checkout", "disabled", true);
   });
 
@@ -303,6 +307,13 @@ describe("stimulus reactive", () => {
       const itemProperties = Object.getOwnPropertyNames(item);
       expect(itemProperties).toContain("priceValue");
       expect(itemProperties).toContain("quantityValue");
+    });
+
+    it("should set value and invoke stimulus setter", async () => {
+      const item = getController<CartItemController>("item-1", "cart-item");
+      item.priceValue = 10;
+      expect(item.priceValue).toBe(10);
+      await verifyAttribute("item-1", "data-cart-item-price-value", 10);
     });
 
     it("should not recreate state when stimulus reuses controller instance", () => {
