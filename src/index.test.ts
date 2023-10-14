@@ -145,7 +145,7 @@ const fireInputEvent = (selector: string, value: string) => {
   );
 };
 
-function verifyContent(testId: string, value: number) {
+function verifyContent(testId: string, value: any) {
   return waitFor(() => {
     expect(screen.getByTestId(testId).textContent).toBe(value.toString());
   });
