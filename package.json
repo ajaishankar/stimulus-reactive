@@ -1,6 +1,6 @@
 {
   "name": "stimulus-reactive",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reactivity for the Stimulus you already have.",
   "repository": {
     "type": "git",
