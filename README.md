@@ -55,7 +55,7 @@ class CartController extends Controller {
 
   connect() {
     // total will be updated when items get added or removed
-    // or when an individual item's price or quantity changes!
+    // or when an item's price or quantity changes
     const total = this.computed(() =>
       this.cartItemOutlets.reduce(
         (total, item) => total + item.priceValue * item.quantityValue,
