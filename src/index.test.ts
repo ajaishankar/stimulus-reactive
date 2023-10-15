@@ -1,7 +1,7 @@
 import { Application, Controller } from "@hotwired/stimulus";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { createEvent, fireEvent, screen, waitFor } from "@testing-library/dom";
-import { EffectScope, toRaw } from "@vue/reactivity";
+import { EffectScope, ShallowRef, computed, toRaw } from "@vue/reactivity";
 import { Computed, Effect, useStimulusReactive } from ".";
 
 type HtmlInputEvent = {
@@ -14,6 +14,7 @@ type ReactiveController = Controller & {
     scope: EffectScope;
   };
 };
+type OutletsRef<T = Controller> = ShallowRef<T[]>;
 
 class CartItemController extends Controller {
   static targets = ["total"];
@@ -257,15 +258,42 @@ describe("stimulus reactive", () => {
       expect(item.__reactive.scope.active).toBe(true);
 
       const cartState = toRaw(cart.__reactive.state) as {
-        cartItemOutlets: CartItemController[];
+        cartItemOutlets: OutletsRef;
       };
       const itemState = toRaw(item.__reactive.state);
 
-      expect(cartState.cartItemOutlets.length).toBe(1);
+      expect(cartState.cartItemOutlets.value.length).toBe(1);
       expect(itemState).toEqual({
         priceValue: 5,
         quantityValue: 1,
       });
+    });
+
+    it("should manage outlets efficiently (with ref instead of reactive array)", async () => {
+      const cart = getController<CartController>("cart", "cart");
+
+      for (let i = 2; i <= 10; ++i) {
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          itemHTML(`item-${i}`, 10)
+        );
+      }
+      await waitUntil(() => cart.cartItemOutlets.length === 10);
+
+      let computes = 0;
+      const count = computed(() => {
+        computes += 1;
+        return cart.cartItemOutlets.length;
+      });
+      expect(count.value).toBe(10);
+      expect(computes).toBe(1);
+
+      document.querySelector("#item-1")!.remove();
+
+      await waitUntil(() => cart.cartItemOutlets.length === 9);
+
+      expect(count.value).toBe(9);
+      expect(computes).toBe(2);
     });
 
     describe("disconnect", () => {
@@ -296,10 +324,10 @@ describe("stimulus reactive", () => {
         );
 
         const cartState = toRaw(cart.__reactive.state) as {
-          cartItemOutlets: CartItemController[];
+          cartItemOutlets: OutletsRef;
         };
 
-        expect(cartState.cartItemOutlets.length).toBe(0);
+        expect(cartState.cartItemOutlets.value.length).toBe(0);
       });
 
       it("should leave values untouched (as disconnect can be called before parent outlet disconnect)", async () => {

@@ -1,8 +1,10 @@
 import { Application, Controller } from "@hotwired/stimulus";
 import {
   EffectScope,
+  ShallowRef,
   effectScope,
   shallowReactive,
+  shallowRef,
   computed as vueComputed,
   effect as vueEffect,
 } from "@vue/reactivity";
@@ -16,6 +18,7 @@ type ReactiveController = Controller & {
     scope: EffectScope;
   };
 };
+type OutletsRef<T = Controller> = ShallowRef<T[]>;
 
 function getPropertyDescriptors(
   prototype: object,
@@ -83,22 +86,21 @@ export function useStimulusReactive(
     Object.entries(outlets).forEach(([key, { get: originalGet }]) => {
       const outletsKey = `${key}s`;
       const hasOutletKey = "has" + key[0].toUpperCase() + key.substring(1);
-      this.__reactive.state[outletsKey] = shallowReactive([]);
+      this.__reactive.state[outletsKey] = shallowRef([]);
       Object.defineProperty(this, outletsKey, {
         get() {
-          return this.__reactive.state[outletsKey];
+          return this.__reactive.state[outletsKey].value;
         },
       });
       Object.defineProperty(this, hasOutletKey, {
         get() {
-          return this.__reactive.state[outletsKey].length > 0;
+          return this.__reactive.state[outletsKey].value.length > 0;
         },
       });
       Object.defineProperty(this, key, {
         get() {
-          return (
-            this.__reactive.state[outletsKey][0] ?? originalGet!.call(this)
-          );
+          const ref = this.__reactive.state[outletsKey] as OutletsRef;
+          return ref.value[0] ?? originalGet!.call(this);
         },
       });
     });
@@ -134,8 +136,8 @@ export function useStimulusReactive(
         controller: Controller,
         element: Element
       ) {
-        const array = this.__reactive.state[outletsKey] as Controller[];
-        array.push(controller);
+        const ref = this.__reactive.state[outletsKey] as OutletsRef;
+        ref.value = [...ref.value, controller];
         methods[connectedKey]?.value?.call(this, controller, element);
       },
     });
@@ -151,11 +153,8 @@ export function useStimulusReactive(
         controller: Controller,
         element: Element
       ) {
-        const outlets = this.__reactive.state[outletsKey] as Controller[];
-        const index = outlets.findIndex((outlet) => outlet === controller);
-        if (index > -1) {
-          outlets.splice(index, 1);
-        }
+        const ref = this.__reactive.state[outletsKey] as OutletsRef;
+        ref.value = ref.value.filter((outlet) => outlet !== controller);
         methods[disconnectedKey]?.value?.call(this, controller, element);
       },
     });
