@@ -268,30 +268,56 @@ describe("stimulus reactive", () => {
       });
     });
 
-    it("should cleanup state and scope on disconnect", async () => {
-      const cart = getController("cart", "cart");
-      const item = getController("item-1", "cart-item");
+    describe("disconnect", () => {
+      it("should cleanup scope", async () => {
+        const cart = getController("cart", "cart");
 
-      const oldScope = cart.__reactive.scope;
-      expect(oldScope.active).toBe(true);
+        const oldScope = cart.__reactive.scope;
+        expect(oldScope.active).toBe(true);
 
-      document.body.innerHTML = "";
+        document.body.innerHTML = "";
 
-      await waitUntil(() => (cart as unknown as CartController).isDisconnected);
+        await waitUntil(
+          () => (cart as unknown as CartController).isDisconnected
+        );
 
-      const newScope = cart.__reactive.scope;
-      expect(newScope).not.toBe(oldScope);
-      expect(newScope.active).toBe(true);
+        const newScope = cart.__reactive.scope;
+        expect(newScope).not.toBe(oldScope);
+        expect(newScope.active).toBe(true);
+      });
 
-      const cartState = toRaw(cart.__reactive.state) as {
-        cartItemOutlets: CartItemController[];
-      };
-      const itemState = toRaw(item.__reactive.state);
+      it("should let stimulus disconnect outlets", async () => {
+        const cart = getController("cart", "cart");
 
-      expect(cartState.cartItemOutlets.length).toBe(0);
-      expect(itemState).toEqual({
-        priceValue: undefined,
-        quantityValue: undefined,
+        document.body.innerHTML = "";
+
+        await waitUntil(
+          () => (cart as unknown as CartController).isDisconnected
+        );
+
+        const cartState = toRaw(cart.__reactive.state) as {
+          cartItemOutlets: CartItemController[];
+        };
+
+        expect(cartState.cartItemOutlets.length).toBe(0);
+      });
+
+      it("should leave values untouched (as disconnect can be called before parent outlet disconnect)", async () => {
+        const cart = getController("cart", "cart");
+        const item = getController("item-1", "cart-item");
+
+        document.body.innerHTML = "";
+
+        await waitUntil(
+          () => (cart as unknown as CartController).isDisconnected
+        );
+
+        const itemState = toRaw(item.__reactive.state);
+
+        expect(itemState).toEqual({
+          priceValue: 5,
+          quantityValue: 1,
+        });
       });
     });
 

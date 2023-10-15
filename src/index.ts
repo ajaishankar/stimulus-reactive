@@ -107,15 +107,6 @@ export function useStimulusReactive(
   function disconnect(this: ReactiveController) {
     this.__reactive.scope.stop();
     this.__reactive.scope = effectScope();
-
-    Object.keys(values).forEach(
-      (key) => (this.__reactive.state[key] = undefined)
-    );
-    Object.keys(outlets).forEach((key) => {
-      const array = this.__reactive.state[`${key}s`] as Controller[];
-      array.splice(0, array.length);
-    });
-
     methods["disconnect"].value.call(this);
   }
 
