@@ -5,7 +5,7 @@
 
 ### Reactivity for the Stimulus you already have
 
-#### View the [Shopping Cart Demo](https://ajaishankar.github.io/stimulus-reactive/) and the [Controllers](https://github.com/ajaishankar/stimulus-reactive/blob/main/docs/)
+#### 🚀 View the [Shopping Cart Demo](https://ajaishankar.github.io/stimulus-reactive/) and the [Controllers](https://github.com/ajaishankar/stimulus-reactive/blob/main/docs/)
 
 When you love the refreshing simplicity of Stimulus but miss the reactivity of other big frameworks.
 
