@@ -5,12 +5,10 @@ import {
   effectScope,
   shallowReactive,
   shallowRef,
-  computed as vueComputed,
   effect as vueEffect,
 } from "@vue/reactivity";
 
 export type Effect = (fn: () => unknown) => void;
-export type Computed = <T>(fn: () => T) => { value: T };
 
 type ReactiveController = Controller & {
   __reactive: {
@@ -164,13 +162,7 @@ export function useStimulusReactive(
     this.__reactive.scope.run(() => vueEffect(fn));
   }
 
-  function computed<T>(this: ReactiveController, fn: () => T): { value: T } {
-    const computedRef = this.__reactive.scope.run(() => vueComputed(fn));
-    return computedRef!;
-  }
-
   Object.defineProperty(prototype, "effect", { value: effect });
-  Object.defineProperty(prototype, "computed", { value: computed });
   Object.defineProperty(prototype, "initialize", { value: initialize });
   Object.defineProperty(prototype, "disconnect", { value: disconnect });
   Object.keys(values).forEach((key) => valueChanged(key));

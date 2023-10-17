@@ -2,7 +2,7 @@ import { Application, Controller } from "@hotwired/stimulus";
 import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { createEvent, fireEvent, screen, waitFor } from "@testing-library/dom";
 import { EffectScope, ShallowRef, computed, toRaw } from "@vue/reactivity";
-import { Computed, Effect, useStimulusReactive } from ".";
+import { Effect, useStimulusReactive } from ".";
 
 type HtmlInputEvent = {
   target: { value: string };
@@ -33,12 +33,12 @@ class CartItemController extends Controller {
     useStimulusReactive(identifier, application);
   }
 
+  get total() {
+    return this.priceValue * this.quantityValue;
+  }
+
   connect() {
-    this.effect(() => {
-      this.totalTarget.textContent = (
-        this.priceValue * this.quantityValue
-      ).toString();
-    });
+    this.effect(() => (this.totalTarget.textContent = this.total.toString()));
   }
 
   setQuantity(event: HtmlInputEvent) {
@@ -57,23 +57,20 @@ class CartController extends Controller {
   declare hasCartItemOutlet: boolean;
   declare cartItemOutlet: CartItemController;
   declare effect: Effect;
-  declare computed: Computed;
 
   static afterLoad(identifier: string, application: Application) {
     useStimulusReactive(identifier, application);
   }
 
+  get total() {
+    return this.cartItemOutlets.reduce((total, item) => total + item.total, 0);
+  }
+
   connect() {
-    const total = this.computed(() =>
-      this.cartItemOutlets.reduce(
-        (total, item) => total + item.priceValue * item.quantityValue,
-        0
-      )
-    );
-    this.effect(() => (this.checkoutTarget.disabled = total.value <= 0));
     this.effect(
-      () => (this.cartTotalTarget.textContent = total.value.toString())
+      () => (this.cartTotalTarget.textContent = this.total.toString())
     );
+    this.effect(() => (this.checkoutTarget.disabled = this.total == 0));
   }
 
   isDisconnected = false;
@@ -406,16 +403,11 @@ describe("stimulus reactive", () => {
       expect(properties).toContain("cartItemOutletDisconnected");
     });
 
-    it("should add lifecycle and reactive methods to prototype", () => {
+    it("should add method (initialize, disconnect, effect) to prototype", () => {
       const cart = getController("cart", "cart");
       const properties = Object.getOwnPropertyNames(cart.constructor.prototype);
       expect(properties).toEqual(
-        expect.arrayContaining([
-          "initialize",
-          "disconnect",
-          "effect",
-          "computed",
-        ])
+        expect.arrayContaining(["initialize", "disconnect", "effect"])
       );
     });
   });
