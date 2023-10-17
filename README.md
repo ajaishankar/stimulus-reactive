@@ -37,13 +37,13 @@ class CartItemController extends Controller {
     useStimulusReactive(identifier, application);
   }
 
+  get total() {
+    return this.priceValue * this.quantityValue;
+  }
+
   connect() {
-    // item total will be updated when price or quantity changes
-    this.effect(() => {
-      this.totalTarget.textContent = (
-        this.priceValue * this.quantityValue
-      ).toString();
-    });
+    // displayed total will be updated when price or quantity changes
+    this.effect(() => (this.totalTarget.textContent = this.total.toString()));
   }
 }
 
@@ -55,23 +55,20 @@ class CartController extends Controller {
     useStimulusReactive(identifier, application);
   }
 
+  get total() {
+    return this.cartItemOutlets.reduce((total, item) => total + item.total, 0);
+  }
+
   connect() {
-    // total will be updated when items get added or removed
-    // or when an item's price or quantity changes
-    const total = this.computed(() =>
-      this.cartItemOutlets.reduce(
-        (total, item) => total + item.priceValue * item.quantityValue,
-        0
-      )
-    );
+    this.effect(() => {
+      // text content is kept in sync with cart total
+      this.cartTotalTarget.textContent = total.toString()
+      // checkout button is enabled only when balance is due
+      this.checkoutTarget.disabled = total == 0
+    });
 
-    // checkout button will be enabled only when balance is due
-    this.effect(() => (this.checkoutTarget.disabled = total.value <= 0));
-
-    // text content is kept in sync with cart total
-    this.effect(
-      () => (this.cartTotalTarget.textContent = total.value.toString())
-    );
+    // another effect for some other dependency
+    this.effect(() => ...);
   }
 }
 ```
@@ -81,10 +78,9 @@ class CartController extends Controller {
 State lives in a controller's values and connected outlets.
 
 1. Call `useStimulusReactive` in the static `afterLoad` method
-2. In the `connect` lifecycle method specify the controller logic using `effect`
+2. In the `connect` lifecycle method specify controller behavior using `effect`s
 3. Effects will run whenever any dependency changes  
    This will be familiar to those coming from other frameworks like React, Vue etc.
-4. Use `computed` (as needed) for any optimizations
 
 That's pretty much it!
 

@@ -6,14 +6,11 @@ function makeMap(str, expectsLowerCase) {
   }
   return expectsLowerCase ? (val) => !!map[val.toLowerCase()] : (val) => !!map[val];
 }
-const NOOP = () => {
-};
 const extend = Object.assign;
 const hasOwnProperty$1 = Object.prototype.hasOwnProperty;
 const hasOwn = (val, key) => hasOwnProperty$1.call(val, key);
 const isArray = Array.isArray;
 const isMap = (val) => toTypeString(val) === "[object Map]";
-const isFunction = (val) => typeof val === "function";
 const isString = (val) => typeof val === "string";
 const isSymbol = (val) => typeof val === "symbol";
 const isObject = (val) => val !== null && typeof val === "object";
@@ -912,51 +909,6 @@ class RefImpl {
   }
 }
 
-class ComputedRefImpl {
-  constructor(getter, _setter, isReadonly, isSSR) {
-    this._setter = _setter;
-    this.dep = void 0;
-    this.__v_isRef = true;
-    this["__v_isReadonly"] = false;
-    this._dirty = true;
-    this.effect = new ReactiveEffect(getter, () => {
-      if (!this._dirty) {
-        this._dirty = true;
-        triggerRefValue(this);
-      }
-    });
-    this.effect.computed = this;
-    this.effect.active = this._cacheable = !isSSR;
-    this["__v_isReadonly"] = isReadonly;
-  }
-  get value() {
-    const self = toRaw(this);
-    trackRefValue(self);
-    if (self._dirty || !self._cacheable) {
-      self._dirty = false;
-      self._value = self.effect.run();
-    }
-    return self._value;
-  }
-  set value(newValue) {
-    this._setter(newValue);
-  }
-}
-function computed(getterOrOptions, debugOptions, isSSR = false) {
-  let getter;
-  let setter;
-  const onlyGetter = isFunction(getterOrOptions);
-  if (onlyGetter) {
-    getter = getterOrOptions;
-    setter = NOOP;
-  } else {
-    getter = getterOrOptions.get;
-    setter = getterOrOptions.set;
-  }
-  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR);
-  return cRef;
-}
-
 function getPropertyDescriptors(prototype, pattern, checkAncestors = true) {
     const matches = {};
     while (prototype != null) {
@@ -1069,12 +1021,7 @@ function useStimulusReactive(identifier, application) {
     function effect$1(fn) {
         this.__reactive.scope.run(() => effect(fn));
     }
-    function computed$1(fn) {
-        const computedRef = this.__reactive.scope.run(() => computed(fn));
-        return computedRef;
-    }
     Object.defineProperty(prototype, "effect", { value: effect$1 });
-    Object.defineProperty(prototype, "computed", { value: computed$1 });
     Object.defineProperty(prototype, "initialize", { value: initialize });
     Object.defineProperty(prototype, "disconnect", { value: disconnect });
     Object.keys(values).forEach((key) => valueChanged(key));

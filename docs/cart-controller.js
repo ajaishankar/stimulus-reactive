@@ -6,6 +6,7 @@ export default class extends Controller {
     shipping: Number,
     taxRate: Number,
   };
+
   static targets = [
     "checkout",
     "subtotal",
@@ -20,34 +21,32 @@ export default class extends Controller {
     useStimulusReactive(identifier, application);
   }
 
+  get subtotal() {
+    return this.cartItemOutlets.reduce((total, item) => total + item.total, 0);
+  }
+
+  get tax() {
+    return (this.subtotal * this.taxRateValue) / 100;
+  }
+
+  get shipping() {
+    return this.subtotal ? this.shippingValue : 0;
+  }
+
+  get total() {
+    return this.subtotal + this.tax + this.shipping;
+  }
+
   connect() {
-    const subtotal = this.computed(() =>
-      this.cartItemOutlets.reduce(
-        (total, item) => total + item.priceValue * item.quantityValue,
-        0
-      )
-    );
-
-    const tax = this.computed(() => (subtotal.value * this.taxRateValue) / 100);
-
-    const shipping = this.computed(() =>
-      subtotal.value ? this.shippingValue : 0
-    );
-
-    const total = this.computed(
-      () => subtotal.value + tax.value + shipping.value
-    );
-
     this.effect(() => {
-      this.subtotalTarget.textContent = subtotal.value.toFixed(2);
-      this.shippingTarget.textContent = shipping.value.toFixed(2);
-      this.taxTarget.textContent = tax.value.toFixed(2);
-      this.totalTarget.textContent = total.value.toFixed(2);
-    });
+      this.subtotalTarget.textContent = this.subtotal.toFixed(2);
+      this.shippingTarget.textContent = this.shipping.toFixed(2);
+      this.taxTarget.textContent = this.tax.toFixed(2);
+      this.totalTarget.textContent = this.total.toFixed(2);
 
-    this.effect(() => {
-      this.checkoutTarget.disabled = total.value <= 0;
-      if (total.value > 0) {
+      this.checkoutTarget.disabled = this.total == 0;
+
+      if (this.total > 0) {
         this.noItemsMessageTarget.classList.add("hidden");
       } else {
         this.noItemsMessageTarget.classList.remove("hidden");

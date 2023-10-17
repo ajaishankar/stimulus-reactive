@@ -12,13 +12,12 @@ export default class extends Controller {
     useStimulusReactive(identifier, application);
   }
 
+  get total() {
+    return this.priceValue * this.quantityValue;
+  }
+
   connect() {
-    this.effect(
-      () =>
-        (this.totalTarget.textContent = (
-          this.priceValue * this.quantityValue
-        ).toFixed(2))
-    );
+    this.effect(() => (this.totalTarget.textContent = this.total));
   }
 
   changeQuantity(e) {
