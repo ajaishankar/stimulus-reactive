@@ -88,4 +88,4 @@ That's pretty much it!
 
 Under the hood Stimulus Reactive uses [@vue/reactivity](https://github.com/vuejs/core/tree/main/packages/reactivity) to do all the hard work.
 
-Give it a go and hopefully this helps make your [majestic monolith](https://m.signalvnoise.com/the-majestic-monolith-29166d022228) sparkle!
+Give it a go and hopefully this helps make your [majestic monolith](https://signalvnoise.com/svn3/the-majestic-monolith/) sparkle!
